@@ -49,7 +49,7 @@ describe('send a simple message', () => {
 			id: '123'
 		},
 		message: {
-			text: 'Hello'
+			text: 'Hello!'
 		}
 	};
 
@@ -67,7 +67,7 @@ describe('send a simple message', () => {
 
 	test('correct response', () => {
 		expect.assertions(1);
-		return expect(messenger.sendMessage('123', 'Hello')).resolves.toEqual(
+		return expect(messenger.sendMessage('123', 'Hello!')).resolves.toEqual(
 			response
 		);
 	});
