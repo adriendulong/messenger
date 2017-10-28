@@ -1,0 +1,20 @@
+{
+	"name": "messenger",
+	"version": "0.1.0",
+	"description": "Simple package to manage messenger platform",
+	"main": "index.js",
+	"repository": "https://github.com/adriendulong/messenger.git",
+	"author": "Adrien Dulong",
+	"license": "MIT",
+	"dependencies": {
+		"request": "^2.83.0",
+		"request-promise": "^4.2.2"
+	},
+	"devDependencies": {
+		"jest": "^21.2.1",
+		"nock": "^9.0.25"
+	},
+	"scripts": {
+		"test": "jest"
+	}
+}
