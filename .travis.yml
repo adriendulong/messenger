@@ -1,0 +1,7 @@
+language: node_js
+node_js:
+ - "node"
+dist: trusty
+script: npm test
+notifications:
+  slack: osangy:ZuD6nuXkIEmyEBpsL8LmOJCT
