@@ -7,14 +7,24 @@
 	"author": "Adrien Dulong",
 	"license": "MIT",
 	"dependencies": {
+		"lodash": "^4.17.4",
 		"request": "^2.83.0",
 		"request-promise": "^4.2.2"
 	},
 	"devDependencies": {
+		"coveralls": "^3.0.0",
 		"jest": "^21.2.1",
 		"nock": "^9.0.25"
 	},
 	"scripts": {
-		"test": "jest"
+		"test":
+			"jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+	},
+	"jest": {
+		"collectCoverageFrom": [
+			"**/*.{js,jsx}",
+			"!**/node_modules/**",
+			"!**/vendor/**"
+		]
 	}
 }
