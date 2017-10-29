@@ -1,5 +1,6 @@
 const Messenger = require('../');
 const QuickReplies = require('../QuickReplies');
+const Buttons = require('../Buttons');
 const nock = require('nock');
 
 // Test the init of the class
@@ -69,7 +70,7 @@ describe('sendMessage : send a simple message', () => {
 		return expect(messenger.sendMessage('123', 'hello')).rejects.toBeDefined();
 	});
 
-	test('the input must contain at least a text or an attachment', () => {
+	test('the input must contain at least a text or an attachment or objects', () => {
 		expect.assertions(1);
 		return expect(
 			messenger.sendMessage('123', { test: 'hello' })
@@ -126,7 +127,7 @@ describe('sendMessage : send a simple message', () => {
 		).rejects.toBeDefined();
 	});
 
-	test('The type provided in an attachment must be of type video, image, aurio or file', () => {
+	test('The type provided in an attachment must be of type video, image, audio or file', () => {
 		expect.assertions(1);
 		return expect(
 			messenger.sendMessage('123', {
@@ -216,28 +217,293 @@ describe('sendMessage : send a simple message', () => {
 		).resolves.toEqual(response);
 	});
 
+	test('Buttons must be instance of the classe Buttons', () => {
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', { buttons: 'coucou' })
+		).rejects.toEqual(new Error('buttons must be of type Buttons'));
+	});
+
+	test('must provide at least one button', () => {
+		const buttons = new Buttons();
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', { buttons: buttons })
+		).rejects.toEqual(new Error('You must provide between 1 and 3 buttons'));
+	});
+
+	test('must provide max 3 buttons', () => {
+		const buttons = new Buttons();
+		buttons.add({ title: 'hello', url: 'http' });
+		buttons.add({ title: 'hello', url: 'http' });
+		buttons.add({ title: 'hello', url: 'http' });
+		buttons.add({ title: 'hello', url: 'http' });
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', { buttons: buttons })
+		).rejects.toEqual(new Error('You must provide between 1 and 3 buttons'));
+	});
+
+	test('must some text with the buttons', () => {
+		const buttons = new Buttons();
+		buttons.add({ title: 'hello', url: 'http' });
+		buttons.add({ title: 'hello', url: 'http' });
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', { buttons: buttons })
+		).rejects.toEqual(new Error('You must provide some text'));
+	});
+
+	// Test to send a button template
+	test('Send a message with buttons and text', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'button',
+						text: 'hello',
+						buttons: [
+							{
+								type: 'web_url',
+								url: 'http',
+								title: 'hello'
+							},
+							{
+								type: 'postback',
+								payload: 'hello',
+								title: 'hello'
+							}
+						]
+					}
+				}
+			}
+		};
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+
+		const buttons = new Buttons();
+		buttons.add({ title: 'hello', url: 'http' });
+		buttons.add({ title: 'hello', postback: 'hello' });
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', {
+				buttons: buttons,
+				text: 'hello'
+			})
+		).resolves.toEqual(response);
+	});
+
 	test('Quick Replies must be provided as an array', () => {
 		expect.assertions(1);
 		return expect(
 			messenger.sendMessage('123', {
 				attachment: {
-					type: 'video'
+					type: 'video',
+					url: 'http'
 				},
 				quickReplies: 'hi'
 			})
 		).rejects.toBeDefined();
 	});
 
-	test('Quick Replies pass', () => {
+	// Test an empty QuickReplies
+	test('Quick Replies empty pass', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'video',
+					payload: {
+						url: 'http'
+					}
+				}
+			}
+		};
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+
 		const qrs = new QuickReplies();
 		expect.assertions(1);
 		return expect(
 			messenger.sendMessage('123', {
 				attachment: {
-					type: 'video'
+					type: 'video',
+					url: 'http'
 				},
 				quickReplies: qrs
 			})
+		).resolves.toEqual(response);
+	});
+
+	test('Quick Replies pass', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				text: 'hello',
+				quick_replies: [
+					{
+						content_type: 'text',
+						title: 'hello',
+						payload: 'hello'
+					}
+				]
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+
+		const qrs = new QuickReplies();
+		qrs.add({ title: 'hello' });
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', {
+				text: 'hello',
+				quickReplies: qrs
+			})
+		).resolves.toEqual(response);
+	});
+
+	test('Handle send a message error', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				text: 'hello',
+				quick_replies: [
+					{
+						content_type: 'text',
+						title: 'hello',
+						payload: 'hello'
+					}
+				]
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(403, 'error');
+
+		const qrs = new QuickReplies();
+		qrs.add({ title: 'hello' });
+		expect.assertions(1);
+		return expect(
+			messenger.sendMessage('123', {
+				text: 'hello',
+				quickReplies: qrs
+			})
+		).rejects.toBeDefined();
+	});
+});
+
+describe('Send action', () => {
+	const messenger = new Messenger({ token: 'foo' });
+	test('send empty', () => {
+		expect.assertions(1);
+		return expect(messenger.sendAction()).rejects.toBeDefined();
+	});
+
+	test('send only id', () => {
+		expect.assertions(1);
+		return expect(messenger.sendAction('123')).rejects.toBeDefined();
+	});
+
+	test('send not known action', () => {
+		expect.assertions(1);
+		return expect(messenger.sendAction('123', 'hello')).rejects.toBeDefined();
+	});
+
+	test('Success in sending action', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			sender_action: 'mark_seen'
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+
+		expect.assertions(1);
+		return expect(messenger.sendAction('123', 'mark_seen')).resolves.toEqual(
+			response
+		);
+	});
+
+	test('manage error in request', () => {
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			sender_action: 'mark_seen'
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(403, 'error');
+
+		expect.assertions(1);
+		return expect(
+			messenger.sendAction('123', 'mark_seen')
 		).rejects.toBeDefined();
 	});
 });

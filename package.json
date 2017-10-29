@@ -12,13 +12,14 @@
 		"request-promise": "^4.2.2"
 	},
 	"devDependencies": {
+		"chance": "^1.0.12",
 		"coveralls": "^3.0.0",
 		"jest": "^21.2.1",
 		"nock": "^9.0.25"
 	},
 	"scripts": {
-		"test":
-			"jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+		"test": "jest --coverage",
+		"travis": "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
 	},
 	"jest": {
 		"collectCoverageFrom": [

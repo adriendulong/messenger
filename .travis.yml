@@ -2,8 +2,6 @@ language: node_js
 node_js:
  - "node"
 dist: trusty
-script: npm test
+script: npm travis
 notifications:
   slack: osangy:ZuD6nuXkIEmyEBpsL8LmOJCT
-# Send coverage data to Coveralls
-after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"

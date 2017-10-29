@@ -1,5 +1,6 @@
 const request = require('request-promise');
 const QuickReplies = require('./QuickReplies');
+const Buttons = require('./Buttons');
 
 class Messenger {
 	constructor(opts) {
@@ -15,29 +16,39 @@ class Messenger {
 	}
 
 	sendMessage(id, opts) {
-		console.log(opts);
 		return new Promise((resolve, reject) => {
-			if (!id) throw new Error('The id of the recipient is not provided');
-			if (!(typeof id === 'string')) throw new Error('The id must be a string');
+			let requestBody = this._buildRecipientBase(id);
+
 			if (!opts) throw new Error('The content of the message is not provided');
 			if (!(typeof opts === 'object'))
 				throw new Error('The message input must be an object');
 
-			let requestBody = {
-				recipient: {
-					id
-				},
-				message: {}
-			};
+			requestBody.message = {};
 
-			if (!opts.text && !opts.attachment)
+			if (!opts.text && !opts.attachment && !opts.buttons)
 				throw new Error(
-					'You must provide at least a text or an attachment to send a message'
+					'You must provide at least a text, attachment, or buttons to send a message'
 				);
 
-			if (opts.text) requestBody.message.text = opts.text;
+			if (opts.buttons) {
+				if (!(opts.buttons instanceof Buttons))
+					throw new Error('buttons must be of type Buttons');
+				if (opts.buttons.length < 1 || opts.buttons.length > 3) {
+					throw new Error('You must provide between 1 and 3 buttons');
+				}
+				if (!opts.text) throw new Error('You must provide some text');
 
-			if (opts.attachment) {
+				requestBody.message.attachment = {
+					type: 'template',
+					payload: {
+						template_type: 'button',
+						text: opts.text,
+						buttons: opts.buttons.buttons
+					}
+				};
+			} else if (opts.text) requestBody.message.text = opts.text;
+
+			if (opts.attachment && !opts.buttons) {
 				if (!opts.attachment.url)
 					throw new Error('For an attachment, you must provide an url');
 				if (!opts.attachment.type)
@@ -55,11 +66,12 @@ class Messenger {
 				};
 			}
 
-			console.log('TEST');
-			if ('quickReplies' in opts) {
-				console.log('QR');
-				if (typeof opts.quickReplies !== 'QuickReplies')
+			if ('quickReplies' in opts && !opts.buttons) {
+				if (!(opts.quickReplies instanceof QuickReplies))
 					throw new Error('quickReplies must be of type QuickReplies');
+				if (opts.quickReplies.length > 0) {
+					requestBody.message.quick_replies = opts.quickReplies.quickReplies;
+				}
 			}
 
 			this._send(requestBody)
@@ -68,14 +80,51 @@ class Messenger {
 		});
 	}
 
-	_send(message) {
+	sendAction(id, action) {
+		return new Promise((resolve, reject) => {
+			const actions = ['mark_seen', 'typing_on', 'typing_off'];
+			let message = this._buildRecipientBase(id);
+
+			if (!action)
+				throw new Error(
+					'Provide an action in this list: mark_seen, typing_on, typing_off'
+				);
+			if (!actions.includes(action))
+				throw new Error(
+					'The action must be one of these: mark_seen, typing_on, typing_off'
+				);
+
+			message.sender_action = action;
+
+			this._send(message)
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	sendGenericTempalte(id, elements) {
+		return new Promise((resolve, reject) => {});
+	}
+
+	_buildRecipientBase(id) {
+		if (!id) throw new Error('Provide the id os the recipient');
+		if (typeof id !== 'string') throw new Error('Id must be a string');
+
+		return {
+			recipient: {
+				id: id
+			}
+		};
+	}
+
+	_send(content) {
 		return new Promise((resolve, reject) => {
 			request
 				.post({
 					method: 'POST',
 					qs: { access_token: this.token },
 					uri: 'https://graph.facebook.com/v2.6/me/messages',
-					body: message,
+					body: content,
 					json: true
 				})
 				.then(body => resolve(body))
