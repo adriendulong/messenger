@@ -11,9 +11,18 @@ class Messenger {
 		if (typeof opts.token !== 'string') {
 			throw new Error('The token must be a string');
 		}
+		if (!opts.verify) {
+			throw new Error('The verify must be provided');
+		}
+		if (typeof opts.verify !== 'string') {
+			throw new Error('The verify must be a string');
+		}
 
-		this.token = opts.token;
+		this._token = opts.token;
+		this._verify = opts.verify;
 	}
+
+	//SEND
 
 	sendMessage(id, opts) {
 		return new Promise((resolve, reject) => {
@@ -102,6 +111,17 @@ class Messenger {
 		});
 	}
 
+	setTyping(id, isOn) {
+		return new Promise((resolve, reject) => {
+			if (typeof isOn !== 'boolean') throw new Error('isOn must be a boolean');
+			const typing = isOn ? 'typing_on' : 'typing_off';
+
+			this.sendAction(id, typing)
+				.then(res => resolve(res))
+				.catch(err => reject(err));
+		});
+	}
+
 	sendGenericTempalte(id, elements, opts) {
 		return new Promise((resolve, reject) => {
 			let message = this._buildRecipientBase(id);
@@ -164,8 +184,7 @@ class Messenger {
 		return new Promise((resolve, reject) => {
 			request
 				.post({
-					method: 'POST',
-					qs: { access_token: this.token },
+					qs: { access_token: this._token },
 					uri: 'https://graph.facebook.com/v2.6/me/messages',
 					body: content,
 					json: true
@@ -173,6 +192,174 @@ class Messenger {
 				.then(body => resolve(body))
 				.catch(err => reject(err));
 		});
+	}
+
+	//MESSENGER PROFILE API
+
+	setGetStarted(payload) {
+		return new Promise((resolve, reject) => {
+			this._setMessengerProperties('get_started', {
+				payload: payload
+			})
+				.then(result => resolve(result))
+				.catch(err => reject(err));
+		});
+	}
+
+	setGreetings(greetings) {
+		return new Promise((resolve, reject) => {
+			if (!Array.isArray(greetings))
+				throw new Error('greetings must be an array');
+			if (greetings.length === 0)
+				throw new Error('The greetings array cant be empty');
+			greetings.forEach(greeting => {
+				if (!greeting.locale || !greeting.text)
+					throw new Error('Each greeting must have a locale and a text');
+			});
+
+			this._setMessengerProperties('greeting', greetings)
+				.then(result => resolve(result))
+				.catch(err => reject(err));
+		});
+	}
+
+	setWhitelistedDomains(domains) {
+		return new Promise((resolve, reject) => {
+			if (!Array.isArray(domains)) throw new Error('domains must be an array');
+			if (domains.length === 0)
+				throw new Error('The domains array cant be empty');
+			if (domains.length > 10) throw new Error('Max whitelisted domains is 10');
+			domains.forEach(domain => {
+				if (typeof domain !== 'string')
+					throw new Error('each domain must be a string');
+			});
+
+			this._setMessengerProperties('whitelisted_domains', domains)
+				.then(result => resolve(result))
+				.catch(err => reject(err));
+		});
+	}
+
+	setPersistentMenu(menus) {
+		return new Promise((resolve, reject) => {
+			if (!menus) {
+				this._deleteMessengerProperties(['persistent_menu'])
+					.then(result => resolve(result))
+					.catch(err => reject(err));
+			} else {
+				if (!Array.isArray(menus)) throw new Error('domains must be an array');
+
+				this._setMessengerProperties('persistent_menu', menus)
+					.then(result => resolve(result))
+					.catch(err => reject(err));
+			}
+		});
+	}
+
+	_setMessengerProperties(property, value) {
+		const url = 'https://graph.facebook.com/v2.6/me/messenger_profile';
+		return new Promise((resolve, reject) => {
+			const content = {};
+			content[property] = value;
+
+			request
+				.post({
+					qs: { access_token: this._token },
+					uri: url,
+					body: content,
+					json: true
+				})
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	_deleteMessengerProperties(properties) {
+		const url = 'https://graph.facebook.com/v2.6/me/messenger_profile';
+		if (!properties) throw new Error('Provide at least one property');
+		if (!Array.isArray(properties))
+			throw new Error('properties must be an array with at least one element');
+		return new Promise((resolve, reject) => {
+			request
+				.delete({
+					qs: { access_token: this._token },
+					uri: url,
+					body: {
+						fields: properties
+					},
+					json: true
+				})
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	//HANDOVER PROTOCOL
+
+	passThread(id) {
+		return new Promise((resolve, reject) => {
+			if (!id)
+				throw new Error(
+					'You need to pass the id of the recipient that you want to pass the conversation'
+				);
+			//We pass to the inbox (app_id : 263902037430900)
+			//TODO: let choose which app we need to pass to
+			request
+				.post({
+					qs: { access_token: this._token },
+					uri: 'https://graph.facebook.com/v2.6/me/pass_thread_control',
+					body: {
+						recipient: {
+							id: id
+						},
+						target_app_id: '263902037430900'
+					},
+					json: true
+				})
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	takeThread(id) {
+		return new Promise((resolve, reject) => {
+			if (!id)
+				throw new Error(
+					'You need to pass the id of the recipient that get the conversation thread'
+				);
+			request
+				.post({
+					qs: { access_token: this._token },
+					uri: 'https://graph.facebook.com/v2.6/me/take_thread_control',
+					body: {
+						recipient: {
+							id: id
+						}
+					},
+					json: true
+				})
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	// _getSecondaryReceivers() {
+	// 	return new Promise((resolve, reject) => {
+	// 		request({
+	// 			qs: {
+	// 				access_token: this._token,
+	// 				fields: 'id,name'
+	// 			},
+	// 			uri: 'https://graph.facebook.com/v2.6/me/secondary_receivers',
+	// 			json: true
+	// 		})
+	// 			.then(response => resolve(response))
+	// 			.catch(err => reject(err));
+	// 	});
+	// }
+
+	get token() {
+		return this._token;
 	}
 }
 
