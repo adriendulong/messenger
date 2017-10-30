@@ -64,8 +64,17 @@ messenger.setTyping('recipient_id', true).then(response => console.log(response)
 More infos about generic template here: https://developers.facebook.com/docs/messenger-platform/send-messages/template/generic
 
 ```javascript
+//Init Elements
 const elements = new Elements();
-elements.add({ title: 'Blue shirt', subtitle: 'A nice blue shirt', image: 'http://mywebsite.com/myimage.png'})
+
+//Add at least one element (and max 10)
+elements.add({
+  title: '', //The title of the element
+  subtitle: '', //The subtitle of the element
+  image: '' //The url of the image
+})
+
+//Send a Generic template
 messenger.sendGenericTempalte('recipient_id', elements, {sharable: false, imageRatio: 'square'}).then(response => console.log(response));
 ```
 
