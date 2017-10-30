@@ -2,6 +2,7 @@ language: node_js
 node_js:
  - "node"
 dist: trusty
-script: npm travis
+script: npm test
 notifications:
   slack: osangy:ZuD6nuXkIEmyEBpsL8LmOJCT
+after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
