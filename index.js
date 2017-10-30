@@ -102,12 +102,55 @@ class Messenger {
 		});
 	}
 
-	sendGenericTempalte(id, elements) {
-		return new Promise((resolve, reject) => {});
+	sendGenericTempalte(id, elements, opts) {
+		return new Promise((resolve, reject) => {
+			let message = this._buildRecipientBase(id);
+
+			if (!elements)
+				throw new Error(
+					'You must provide at least one, and max 10 elements to build a generic template'
+				);
+			if (elements.length > 10 || elements.length === 0)
+				throw new Error(
+					'You must provide at least one, and max 10 elements to build a generic template'
+				);
+
+			message.message = {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'generic'
+					}
+				}
+			};
+
+			if (opts) {
+				if (opts.sharable) {
+					if (typeof opts.sharable !== 'boolean')
+						throw new Error('The sharable attribute must be a boolean');
+					message.message.attachment.payload.sharable = opts.sharable;
+				}
+
+				if (opts.imageRatio) {
+					if (!['horizontal', 'square'].includes(opts.imageRatio))
+						throw new Error(
+							'The imageRatio can be either horizontal or square.'
+						);
+					message.message.attachment.payload.image_aspect_ratio =
+						opts.imageRatio;
+				}
+			}
+
+			message.message.attachment.payload.elements = elements.elements;
+
+			this._send(message)
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
 	}
 
 	_buildRecipientBase(id) {
-		if (!id) throw new Error('Provide the id os the recipient');
+		if (!id) throw new Error('Provide the id of the recipient');
 		if (typeof id !== 'string') throw new Error('Id must be a string');
 
 		return {

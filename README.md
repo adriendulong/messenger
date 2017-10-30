@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/adriendulong/messenger.svg?branch=master)](https://travis-ci.org/adriendulong/messenger) [![Coverage Status](https://coveralls.io/repos/github/adriendulong/messenger/badge.svg)](https://coveralls.io/github/adriendulong/messenger)
+[![Build Status](https://travis-ci.org/adriendulong/messenger.svg?branch=master)](https://travis-ci.org/adriendulong/messenger) [![Coverage Status](https://coveralls.io/repos/github/adriendulong/messenger/badge.svg)](https://coveralls.io/github/adriendulong/messenger) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 # An API for Facebook Messenger platform
 
 ## Init

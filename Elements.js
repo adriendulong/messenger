@@ -51,6 +51,8 @@ class Elements {
 			}
 		}
 
+		//TODO: Manage sharable elements
+
 		this._elements.push(element);
 
 		return this._elements;

@@ -1,6 +1,7 @@
 const Messenger = require('../');
 const QuickReplies = require('../QuickReplies');
 const Buttons = require('../Buttons');
+const Elements = require('../Elements');
 const nock = require('nock');
 
 // Test the init of the class
@@ -504,6 +505,288 @@ describe('Send action', () => {
 		expect.assertions(1);
 		return expect(
 			messenger.sendAction('123', 'mark_seen')
+		).rejects.toBeDefined();
+	});
+});
+
+describe('Send Generic templates', () => {
+	const messenger = new Messenger({ token: 'foo' });
+	test('Must provide the id of the recipient', () => {
+		expect.assertions(1);
+		return expect(messenger.sendGenericTempalte()).rejects.toEqual(
+			new Error('Provide the id of the recipient')
+		);
+	});
+
+	test('The id of the recipient must be a string', () => {
+		expect.assertions(1);
+		return expect(messenger.sendGenericTempalte(123)).rejects.toEqual(
+			new Error('Id must be a string')
+		);
+	});
+
+	test('Must provide elements', () => {
+		expect.assertions(1);
+		return expect(messenger.sendGenericTempalte('123')).rejects.toEqual(
+			new Error(
+				'You must provide at least one, and max 10 elements to build a generic template'
+			)
+		);
+	});
+
+	test('Must provide at least one element', () => {
+		const elements = new Elements();
+		expect.assertions(1);
+		return expect(
+			messenger.sendGenericTempalte('123', elements)
+		).rejects.toEqual(
+			new Error(
+				'You must provide at least one, and max 10 elements to build a generic template'
+			)
+		);
+	});
+
+	test('Max 10 elements', () => {
+		expect.assertions(1);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 15) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements)
+		).rejects.toEqual(
+			new Error(
+				'You must provide at least one, and max 10 elements to build a generic template'
+			)
+		);
+	});
+
+	test('Sharable opts must be a boolean', () => {
+		expect.assertions(1);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements, { sharable: 'coucou' })
+		).rejects.toEqual(new Error('The sharable attribute must be a boolean'));
+	});
+
+	test('imageRatio opts must be either horizontal or square', () => {
+		expect.assertions(1);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements, { imageRatio: 'hello' })
+		).rejects.toEqual(
+			new Error('The imageRatio can be either horizontal or square.')
+		);
+	});
+
+	test('Send with elements and no options', () => {
+		expect.assertions(1);
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'generic',
+						elements: [
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							}
+						]
+					}
+				}
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements)
+		).resolves.toEqual(response);
+	});
+
+	test('Send with elements and sharable option', () => {
+		expect.assertions(1);
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'generic',
+						sharable: true,
+						elements: [
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							}
+						]
+					}
+				}
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements, { sharable: true })
+		).resolves.toEqual(response);
+	});
+
+	test('Send with elements and imageRatio option', () => {
+		expect.assertions(1);
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'generic',
+						image_aspect_ratio: 'square',
+						elements: [
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							}
+						]
+					}
+				}
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(200, response);
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements, { imageRatio: 'square' })
+		).resolves.toEqual(response);
+	});
+
+	test('Handle request error', () => {
+		expect.assertions(1);
+		const payload = {
+			recipient: {
+				id: '123'
+			},
+			message: {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'generic',
+						image_aspect_ratio: 'square',
+						elements: [
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							},
+							{
+								title: 'hello'
+							}
+						]
+					}
+				}
+			}
+		};
+
+		const response = {
+			recipient_id: '1000003',
+			message_id: 'mid.1234567890'
+		};
+
+		nock('https://graph.facebook.com')
+			.post('/v2.6/me/messages', payload)
+			.query({
+				access_token: messenger.token
+			})
+			.reply(403, 'Problem');
+		const elements = new Elements();
+		let i = 0;
+		while (i < 3) {
+			i++;
+			elements.add({ title: 'hello' });
+		}
+		return expect(
+			messenger.sendGenericTempalte('123', elements, { imageRatio: 'square' })
 		).rejects.toBeDefined();
 	});
 });
