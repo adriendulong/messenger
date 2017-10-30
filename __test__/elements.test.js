@@ -1,4 +1,5 @@
 const Elements = require('../Elements');
+const Buttons = require('../Buttons');
 const chance = require('chance')();
 const _ = require('lodash');
 
@@ -82,6 +83,90 @@ describe('Elements tests', () => {
 					subtitle: longTitle
 				})
 			).toEqual(expect.arrayContaining(expectedSubtitle));
+		});
+
+		test('An image can be provided', () => {
+			const expectedImage = [
+				{
+					title: 'Shirt',
+					subtitle: 'Cool shirt',
+					image_url: 'http://'
+				}
+			];
+			expect(
+				elements.add({
+					title: 'Shirt',
+					subtitle: 'Cool shirt',
+					image: 'http://'
+				})
+			).toEqual(expect.arrayContaining(expectedImage));
+		});
+
+		test('Provide a default action', () => {
+			const expectedDefault = [
+				{
+					title: 'Shirt',
+					subtitle: 'Cool shirt',
+					image_url: 'http://',
+					default_action: {
+						type: 'web_url',
+						url: 'http://default'
+					}
+				}
+			];
+			expect(
+				elements.add({
+					title: 'Shirt',
+					subtitle: 'Cool shirt',
+					image: 'http://',
+					defaultUrl: 'http://default'
+				})
+			).toEqual(expect.arrayContaining(expectedDefault));
+		});
+
+		test('There must be less than 3 buttons', () => {
+			const buttons = new Buttons();
+			buttons.add({ title: 'hello', url: 'http' });
+			buttons.add({ title: 'hello', url: 'http' });
+			buttons.add({ title: 'hello', url: 'http' });
+			buttons.add({ title: 'hello', url: 'http' });
+			expect(() => elements.add({ title: 'hello you', buttons })).toThrow(
+				new Error('The max of buttons that you can provide is 3')
+			);
+		});
+
+		test('Provide an empty buttons array works, but does not create a key buttons', () => {
+			const buttons = new Buttons();
+
+			const expectNoButtons = [
+				{
+					title: 'hello no buttons'
+				}
+			];
+			expect(elements.add({ title: 'hello no buttons', buttons })).toEqual(
+				expect.arrayContaining(expectNoButtons)
+			);
+		});
+
+		test('Add buttons to an element', () => {
+			const buttons = new Buttons();
+			buttons.add({ title: 'hello', url: 'http' });
+
+			const expectButtons = [
+				{
+					title: 'hello you',
+					buttons: [
+						{
+							title: 'hello',
+							type: 'web_url',
+							url: 'http'
+						}
+					]
+				}
+			];
+			expect(elements.add({ title: 'hello you', buttons })).toEqual(
+				expect.arrayContaining(expectButtons)
+			);
 		});
 	});
 });

@@ -47,7 +47,7 @@ class Elements {
 			}
 
 			if (opts.buttons.length > 0) {
-				element.buttons = opts.buttons;
+				element.buttons = opts.buttons.buttons;
 			}
 		}
 
