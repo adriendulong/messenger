@@ -20,13 +20,14 @@ class Messenger {
 
 		this._token = opts.token;
 		this._verify = opts.verify;
+		this._isSubscriptionPage = opts.isSub ? opts.isSub : false;
 	}
 
 	//SEND
 
 	sendMessage(id, opts) {
 		return new Promise((resolve, reject) => {
-			let requestBody = this._buildRecipientBase(id);
+			let requestBody = this._buildBodyBase(id, opts);
 
 			if (!opts) throw new Error('The content of the message is not provided');
 			if (!(typeof opts === 'object'))
@@ -58,8 +59,10 @@ class Messenger {
 			} else if (opts.text) requestBody.message.text = opts.text;
 
 			if (opts.attachment && !opts.buttons) {
-				if (!opts.attachment.url)
-					throw new Error('For an attachment, you must provide an url');
+				if (!opts.attachment.url && !opts.attachment.attachment_id)
+					throw new Error(
+						'For an attachment, you must provide an url or an attachment_id'
+					);
 				if (!opts.attachment.type)
 					throw new Error('For an attachment, you must provide a type');
 				if (!['audio', 'video', 'image', 'file'].includes(opts.attachment.type))
@@ -69,10 +72,14 @@ class Messenger {
 
 				requestBody.message.attachment = {
 					type: opts.attachment.type,
-					payload: {
-						url: opts.attachment.url
-					}
+					payload: {}
 				};
+
+				if (opts.attachment.url)
+					requestBody.message.attachment.payload.url = opts.attachment.url;
+				else
+					requestBody.message.attachment.payload.attachment_id =
+						opts.attachment.attachment_id;
 			}
 
 			if ('quickReplies' in opts && !opts.buttons) {
@@ -92,7 +99,11 @@ class Messenger {
 	sendAction(id, action) {
 		return new Promise((resolve, reject) => {
 			const actions = ['mark_seen', 'typing_on', 'typing_off'];
-			let message = this._buildRecipientBase(id);
+			let message = {
+				recipient: {
+					id
+				}
+			};
 
 			if (!action)
 				throw new Error(
@@ -124,7 +135,7 @@ class Messenger {
 
 	sendGenericTempalte(id, elements, opts) {
 		return new Promise((resolve, reject) => {
-			let message = this._buildRecipientBase(id);
+			let message = this._buildBodyBase(id, opts);
 
 			if (!elements)
 				throw new Error(
@@ -169,13 +180,124 @@ class Messenger {
 		});
 	}
 
-	_buildRecipientBase(id) {
+	sendMediaTemplate(id, elementOpts, buttons) {
+		return new Promise((resolve, reject) => {
+			let body = this._buildBodyBase(id, elementOpts);
+
+			if (!elementOpts)
+				throw new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				);
+			if (
+				!elementOpts.mediaType ||
+				(!elementOpts.attachment_id && !elementOpts.url) ||
+				!['image', 'video'].includes(elementOpts.mediaType)
+			)
+				throw new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				);
+			if (!buttons) throw new Error('You must provide one button');
+
+			body.message = {
+				attachment: {
+					type: 'template',
+					payload: {
+						template_type: 'media',
+						elements: [
+							{
+								media_type: elementOpts.mediaType
+							}
+						]
+					}
+				}
+			};
+
+			if (elementOpts.attachment_id)
+				body.message.attachment.payload.elements[0].attachment_id =
+					elementOpts.attachment_id;
+			else body.message.attachment.payload.elements[0].url = elementOpts.url;
+
+			if (buttons.length !== 1) {
+				throw new Error('You must provide between one button and only one');
+			}
+			body.message.attachment.payload.elements[0].buttons = buttons.buttons;
+
+			this._send(body)
+				.then(body => resolve(body))
+				.catch(err => reject(err));
+		});
+	}
+
+	saveAsset(url, type) {
+		return new Promise((resolve, reject) => {
+			if (!url) throw new Error('No url provided');
+			if (!type || !['audio', 'video', 'image', 'file'].includes(type))
+				throw new Error('Provide a type among image, video, audio or file');
+
+			const content = {
+				message: {
+					attachment: {
+						type,
+						payload: {
+							is_reusable: true,
+							url
+						}
+					}
+				}
+			};
+
+			request
+				.post({
+					qs: { access_token: this._token },
+					uri: 'https://graph.facebook.com/v2.6/me/message_attachments',
+					body: content,
+					json: true
+				})
+				.then(body => resolve(body.attachment_id))
+				.catch(err => reject(err));
+		});
+	}
+
+	_buildBodyBase(id, opts) {
 		if (!id) throw new Error('Provide the id of the recipient');
 		if (typeof id !== 'string') throw new Error('Id must be a string');
+		let finalType;
+		if (opts && opts.messagingType) {
+			if (
+				![
+					'RESPONSE',
+					'UPDATE',
+					'MESSAGE_TAG',
+					'NON_PROMOTIONAL_SUBSCRIPTION'
+				].includes(opts.messagingType)
+			)
+				throw new Error(
+					'The messagingType must be one of these options : RESPONSE, UPDATE, MESSAGE_TAG or NON_PROMOTIONAL_SUBSCRIPTION. For more infos see here: https://developers.facebook.com/docs/messenger-platform/send-messages'
+				);
+			else if (opts.messagingType === 'MESSAGE_TAG' && !opts.tag)
+				throw new Error(
+					'If the messagingType is MESSAGE_TAG you must provide a tag'
+				);
+			else {
+				let body = {
+					messaging_type: opts.messagingType,
+					recipient: {
+						id
+					}
+				};
+
+				if (opts.messagingType === 'MESSAGE_TAG') body.tag = opts.tag;
+				return body;
+			}
+		} else {
+			if (this._isSubscriptionPage) finalType = 'NON_PROMOTIONAL_SUBSCRIPTION';
+			else finalType = 'RESPONSE';
+		}
 
 		return {
+			messaging_type: finalType,
 			recipient: {
-				id: id
+				id
 			}
 		};
 	}
@@ -360,6 +482,128 @@ class Messenger {
 
 	get token() {
 		return this._token;
+	}
+
+	//MIDDLEWARE
+
+	middleware() {
+		return (req, res) => {
+			res.writeHead(200, {
+				'Content-Type': 'Application/json'
+			});
+
+			if (req.url === '/_status')
+				return res.end(JSON.stringify({ status: 'ok' }));
+			if (this._verify && req.method === 'GET')
+				return this._verifyToken(req, res);
+			if (req.method !== 'POST') return res.end();
+
+			req.on('data', chunk => {
+				body += chunk;
+			});
+
+			req.on('end', () => {
+				// check message integrity
+				if (this.app_secret) {
+					let hmac = crypto.createHmac('sha1', this.app_secret);
+					hmac.update(body);
+
+					if (req.headers['x-hub-signature'] !== `sha1=${hmac.digest('hex')}`) {
+						this.emit('error', new Error('Message integrity check failed'));
+						return res.end(
+							JSON.stringify({
+								status: 'not ok',
+								error: 'Message integrity check failed'
+							})
+						);
+					}
+				}
+
+				let parsed = JSON.parse(body);
+				if (
+					parsed.entry[0].messaging !== null &&
+					typeof parsed.entry[0].messaging[0] !== 'undefined'
+				) {
+					this._handleMessage(parsed);
+				}
+
+				res.end(JSON.stringify({ status: 'ok' }));
+			});
+		};
+	}
+
+	_handleMessage(json) {
+		let entries = json.entry;
+
+		entries.forEach(entry => {
+			let events = entry.messaging;
+
+			events.forEach(event => {
+				// handle inbound messages and echos
+				if (event.message) {
+					if (event.message.is_echo) {
+						this._handleEvent('echo', event);
+					} else {
+						this._handleEvent('message', event);
+					}
+				}
+
+				// handle postbacks
+				if (event.postback) {
+					this._handleEvent('postback', event);
+				}
+
+				// handle message delivered
+				if (event.delivery) {
+					this._handleEvent('delivery', event);
+				}
+
+				// handle message read
+				if (event.read) {
+					this._handleEvent('read', event);
+				}
+
+				// handle authentication
+				if (event.optin) {
+					this._handleEvent('authentication', event);
+				}
+
+				// handle referrals (e.g. m.me links)
+				if (event.referral) {
+					this._handleEvent('referral', event);
+				}
+
+				// handle account_linking
+				if (event.account_linking && event.account_linking.status) {
+					if (event.account_linking.status === 'linked') {
+						this._handleEvent('accountLinked', event);
+					} else if (event.account_linking.status === 'unlinked') {
+						this._handleEvent('accountUnlinked', event);
+					}
+				}
+			});
+		});
+	}
+
+	_getActionsObject(event) {
+		return {
+			setTyping: this.setTyping.bind(this, event.sender.id),
+			markRead: this.sendAction.bind(this, event.sender.id, 'mark_seen')
+		};
+	}
+
+	_verifyToken(req, res) {
+		let query = qs.parse(url.parse(req.url).query);
+
+		if (query['hub.verify_token'] === this._verify) {
+			return res.end(query['hub.challenge']);
+		}
+
+		return res.end('Error, wrong validation token');
+	}
+
+	_handleEvent(type, event) {
+		this.emit(type, event, this._getActionsObject(event));
 	}
 }
 

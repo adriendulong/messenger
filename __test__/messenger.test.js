@@ -97,6 +97,7 @@ describe('SEND API', () => {
 
 		test('send a text', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -121,6 +122,132 @@ describe('SEND API', () => {
 			return expect(
 				messenger.sendMessage('123', { text: 'Hello!' })
 			).resolves.toEqual(response);
+		});
+
+		test('send a text with a custom messagingType', () => {
+			const payload = {
+				messaging_type: 'UPDATE',
+				recipient: {
+					id: '123'
+				},
+				message: {
+					text: 'Hello!'
+				}
+			};
+
+			const response = {
+				recipient_id: '1000003',
+				message_id: 'mid.1234567890'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/messages', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(200, response);
+
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', {
+					text: 'Hello!',
+					messagingType: 'UPDATE'
+				})
+			).resolves.toEqual(response);
+		});
+
+		test('send a text with a MESSAGE_TAG as messagingType', () => {
+			const payload = {
+				messaging_type: 'MESSAGE_TAG',
+				recipient: {
+					id: '123'
+				},
+				message: {
+					text: 'Hello!'
+				},
+				tag: 'TRANSPORTATION_UPDATE'
+			};
+
+			const response = {
+				recipient_id: '1000003',
+				message_id: 'mid.1234567890'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/messages', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(200, response);
+
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', {
+					text: 'Hello!',
+					messagingType: 'MESSAGE_TAG',
+					tag: 'TRANSPORTATION_UPDATE'
+				})
+			).resolves.toEqual(response);
+		});
+
+		test('send a text when instance of Messenger has subscription set to true', () => {
+			const messenger = new Messenger({
+				token: 'foo',
+				verify: 'foo',
+				isSub: true
+			});
+
+			const payload = {
+				messaging_type: 'NON_PROMOTIONAL_SUBSCRIPTION',
+				recipient: {
+					id: '123'
+				},
+				message: {
+					text: 'Hello!'
+				}
+			};
+
+			const response = {
+				recipient_id: '1000003',
+				message_id: 'mid.1234567890'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/messages', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(200, response);
+
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', {
+					text: 'Hello!'
+				})
+			).resolves.toEqual(response);
+		});
+
+		test('send a text with a wrong custom messagingType', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', { text: 'Hello!', messagingType: 'COOL' })
+			).rejects.toEqual(
+				new Error(
+					'The messagingType must be one of these options : RESPONSE, UPDATE, MESSAGE_TAG or NON_PROMOTIONAL_SUBSCRIPTION. For more infos see here: https://developers.facebook.com/docs/messenger-platform/send-messages'
+				)
+			);
+		});
+
+		test('send a text with MESSAGE_TAG but without tag', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', {
+					text: 'Hello!',
+					messagingType: 'MESSAGE_TAG'
+				})
+			).rejects.toEqual(
+				new Error('If the messagingType is MESSAGE_TAG you must provide a tag')
+			);
 		});
 
 		test('when sending an attachment, must provide an url', () => {
@@ -159,6 +286,7 @@ describe('SEND API', () => {
 
 		test('send an attachment', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -195,8 +323,48 @@ describe('SEND API', () => {
 			).resolves.toEqual(response);
 		});
 
+		test('send an attachment with attachment id', () => {
+			const payload = {
+				messaging_type: 'RESPONSE',
+				recipient: {
+					id: '123'
+				},
+				message: {
+					attachment: {
+						type: 'video',
+						payload: {
+							attachment_id: '123'
+						}
+					}
+				}
+			};
+
+			const response = {
+				recipient_id: '1000003',
+				message_id: 'mid.1234567890'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/messages', payload)
+				.query({
+					access_token: messenger.token
+				})
+				.reply(200, response);
+
+			expect.assertions(1);
+			return expect(
+				messenger.sendMessage('123', {
+					attachment: {
+						type: 'video',
+						attachment_id: '123'
+					}
+				})
+			).resolves.toEqual(response);
+		});
+
 		test('send text and attachment', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -275,6 +443,7 @@ describe('SEND API', () => {
 		// Test to send a button template
 		test('Send a message with buttons and text', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -339,6 +508,7 @@ describe('SEND API', () => {
 		// Test an empty QuickReplies
 		test('Quick Replies empty pass', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -377,6 +547,7 @@ describe('SEND API', () => {
 
 		test('Quick Replies pass', () => {
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -689,6 +860,7 @@ describe('SEND API', () => {
 		test('Send with elements and no options', () => {
 			expect.assertions(1);
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -738,6 +910,7 @@ describe('SEND API', () => {
 		test('Send with elements and sharable option', () => {
 			expect.assertions(1);
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -788,6 +961,7 @@ describe('SEND API', () => {
 		test('Send with elements and imageRatio option', () => {
 			expect.assertions(1);
 			const payload = {
+				messaging_type: 'RESPONSE',
 				recipient: {
 					id: '123'
 				},
@@ -883,6 +1057,208 @@ describe('SEND API', () => {
 			return expect(
 				messenger.sendGenericTempalte('123', elements, { imageRatio: 'square' })
 			).rejects.toBeDefined();
+		});
+	});
+
+	describe('Save Asset', () => {
+		const messenger = new Messenger({ token: 'foo', verify: 'foo' });
+		test('No url throw an error', () => {
+			expect.assertions(1);
+			return expect(messenger.saveAsset()).rejects.toEqual(
+				new Error('No url provided')
+			);
+		});
+		test('No type throw an error', () => {
+			expect.assertions(1);
+			return expect(messenger.saveAsset('http://')).rejects.toEqual(
+				new Error('Provide a type among image, video, audio or file')
+			);
+		});
+		test('Wrong type throw an error', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.saveAsset('http://', 'telephone')
+			).rejects.toEqual(
+				new Error('Provide a type among image, video, audio or file')
+			);
+		});
+		test('Save asset successfully', () => {
+			expect.assertions(1);
+
+			const payload = {
+				message: {
+					attachment: {
+						type: 'image',
+						payload: {
+							is_reusable: true,
+							url: 'http://'
+						}
+					}
+				}
+			};
+
+			const response = {
+				attachment_id: '1857777774821032'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/message_attachments', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(200, response);
+
+			return expect(messenger.saveAsset('http://', 'image')).resolves.toEqual(
+				'1857777774821032'
+			);
+		});
+		test('Manage Error when saving asset', () => {
+			expect.assertions(1);
+			const payload = {
+				message: {
+					attachment: {
+						type: 'image',
+						payload: {
+							is_reusable: true,
+							url: 'http://'
+						}
+					}
+				}
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/message_attachments', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(403, 'error');
+
+			return expect(
+				messenger.saveAsset('http://', 'image')
+			).rejects.toBeDefined();
+		});
+	});
+
+	describe('Send Media Template', () => {
+		const messenger = new Messenger({ token: 'foo', verify: 'foo' });
+		test('No infos about the element throw an error', () => {
+			expect.assertions(1);
+			return expect(messenger.sendMediaTemplate('123')).rejects.toEqual(
+				new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				)
+			);
+		});
+		test('No media type in the element infos throw an error', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMediaTemplate('123', { url: 'http://' })
+			).rejects.toEqual(
+				new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				)
+			);
+		});
+		test('No attachment_id and url in the element infos throw an error', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMediaTemplate('123', { mediaType: 'image' })
+			).rejects.toEqual(
+				new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				)
+			);
+		});
+		test('Wrong media type in the element infos throw an error', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMediaTemplate('123', { mediaType: 'audio' })
+			).rejects.toEqual(
+				new Error(
+					'You must provide informations about the media template. At least a mediaType (image or video), an attachment_id or a Facebook url'
+				)
+			);
+		});
+		test('No button throw an error', () => {
+			expect.assertions(1);
+			return expect(
+				messenger.sendMediaTemplate('123', {
+					mediaType: 'image',
+					attachment_id: '123'
+				})
+			).rejects.toEqual(new Error('You must provide one button'));
+		});
+		test('Only one button is accepted', () => {
+			let mediaButtons = new Buttons();
+			mediaButtons.add({ title: 'Hi', url: 'http://' });
+			mediaButtons.add({ title: 'Hi', url: 'http://' });
+			expect.assertions(1);
+			return expect(
+				messenger.sendMediaTemplate(
+					'123',
+					{
+						mediaType: 'image',
+						attachment_id: '123'
+					},
+					mediaButtons
+				)
+			).rejects.toEqual(
+				new Error('You must provide between one button and only one')
+			);
+		});
+
+		test('Save me successfully', () => {
+			expect.assertions(1);
+			let mediaButtons = new Buttons();
+			mediaButtons.add({ title: 'Hi', url: 'http://' });
+
+			const payload = {
+				recipient: {
+					id: '123'
+				},
+				messaging_type: 'RESPONSE',
+				message: {
+					attachment: {
+						type: 'template',
+						payload: {
+							template_type: 'media',
+							elements: [
+								{
+									media_type: 'image',
+									attachment_id: '123',
+									buttons: [
+										{
+											title: 'Hi',
+											type: 'web_url',
+											url: 'http://'
+										}
+									]
+								}
+							]
+						}
+					}
+				}
+			};
+
+			const response = {
+				recipient_id: '1000003',
+				message_id: 'mid.1234567890'
+			};
+
+			nock('https://graph.facebook.com')
+				.post('/v2.6/me/messages', payload)
+				.query({
+					access_token: messenger._token
+				})
+				.reply(200, response);
+
+			return expect(
+				messenger.sendMediaTemplate(
+					'123',
+					{ mediaType: 'image', attachment_id: '123' },
+					mediaButtons
+				)
+			).resolves.toEqual(response);
 		});
 	});
 });
