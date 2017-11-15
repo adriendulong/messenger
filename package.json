@@ -1,6 +1,6 @@
 {
 	"name": "fb-messenger-platform",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Simple package to manage messenger platform",
 	"main": "index.js",
 	"repository": "https://github.com/adriendulong/messenger.git",
