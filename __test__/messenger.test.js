@@ -15,10 +15,6 @@ describe('CLASS', () => {
 			}).not.toThrow();
 		});
 
-		test('messenger is an object', () => {
-			expect(messenger).toBeInstanceOf(Object);
-		});
-
 		test('token is stored', () => {
 			expect(messenger.token).toBe('tokenGiven');
 		});

@@ -1,9 +1,14 @@
 const request = require('request-promise');
 const QuickReplies = require('./QuickReplies');
+const EventEmitter = require('events').EventEmitter;
+const crypto = require('crypto');
 const Buttons = require('./Buttons');
+const url = require('url');
 
-class Messenger {
+class Messenger extends EventEmitter {
 	constructor(opts) {
+		super();
+
 		opts = opts || {};
 		if (!opts.token) {
 			throw new Error('The page token must be provided');
