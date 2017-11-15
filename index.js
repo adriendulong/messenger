@@ -505,6 +505,8 @@ class Messenger extends EventEmitter {
 				return this._verifyToken(req, res);
 			if (req.method !== 'POST') return res.end();
 
+			let body = '';
+
 			req.on('data', chunk => {
 				body += chunk;
 			});
