@@ -3,7 +3,9 @@ const QuickReplies = require('./QuickReplies');
 const EventEmitter = require('events').EventEmitter;
 const crypto = require('crypto');
 const Buttons = require('./Buttons');
+const Elements = require('./Elements');
 const url = require('url');
+const qs = require('querystring');
 
 class Messenger extends EventEmitter {
 	constructor(opts) {
@@ -612,4 +614,9 @@ class Messenger extends EventEmitter {
 	}
 }
 
-module.exports = Messenger;
+module.exports = {
+	Messenger,
+	Buttons,
+	Elements,
+	QuickReplies
+};

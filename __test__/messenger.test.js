@@ -1,7 +1,7 @@
-const Messenger = require('../');
-const QuickReplies = require('../QuickReplies');
-const Buttons = require('../Buttons');
-const Elements = require('../Elements');
+const Messenger = require('../').Messenger;
+const QuickReplies = require('../').QuickReplies;
+const Buttons = require('../').Buttons;
+const Elements = require('../').Elements;
 const nock = require('nock');
 
 // Test the init of the class
